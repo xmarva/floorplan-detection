@@ -40,5 +40,7 @@ When you run server you should pass `--model` argument. Supported models are:
 - `faster_rcnn`
 - `retinanet`
 
+You need download [model weights](https://drive.google.com/drive/folders/1MgW3Qo-8K4OrHi4ebvYd-81cTqQxwLgz?usp=sharing) and put into `weights/` folder.
+
 ### Report
 - [FloorPlan_Detection_Report.pdf](docs/FloorPlan_Detection_Report.pdf)
