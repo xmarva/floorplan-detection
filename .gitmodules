@@ -1,0 +1,6 @@
+[submodule "data/CubiCasa5k"]
+	path = data/CubiCasa5k
+	url = https://github.com/CubiCasa/CubiCasa5k.git
+[submodule "mmdetection"]
+	path = mmdetection
+	url = https://github.com/open-mmlab/mmdetection.git
