@@ -7,13 +7,13 @@ from mmdet.apis import init_detector, inference_detector
 
 app = FastAPI()
 
-CONFIG_DIR = "mmdetection/configs/"
+CONFIG_DIR = "configs/"
 CHECKPOINT_DIR = "weights/"
 DEVICE = "cuda:0"
 
 MODEL_TYPES = {
-    "faster_rcnn": "faster_rcnn/custom_faster_rcnn_r50_fpn.py",
-    "cascade_rcnn": "cascade_rcnn/custom_cascade_rcnn_r50_fpn.py",
+    "faster_rcnn": "faster_rcnn.py",
+    "cascade_rcnn": "cascade_rcnn.py",
     # More model types
 }
 
