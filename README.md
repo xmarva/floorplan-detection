@@ -15,15 +15,15 @@ Download the  [pre-trained model weights](https://drive.google.com/drive/folders
 ### Build with Docker
 I used Kaggle to experiment, so the image weighs a gazillion (no, seriously, 66) gb. If I don't forget, I'll rebuild a lighter image.
 
-To build the code environment, use the provided Dockerfile in the root directory:
+To build the code environment, use the provided Dockerfile in the root directory::
 
 `docker build -t floorplan-detection . -f Dockerfile`
 
-Please don't forget:
+Please don't forget to clean up with:
 
 `docker system prune`
 
-And use command to run container:
+Then, use this command to run the container:
 
 `docker run -it --rm --gpus all -p 5000:5000 florplan_detection:latest bash`
 
@@ -34,7 +34,7 @@ To start the FastAPI server, use the following command:
 
 ### API Request
 
-I assume that the API input is an image with a region of interest containing only the architectural plan
+I assume that the API input is an image with a region of interest containing only the architectural plan:
 
 ```shell
 curl -X POST "http://localhost:5000/run-inference?type=wall" \
@@ -81,7 +81,7 @@ The type parameter (wall or room) is required but doesn't affect the response st
 The task doesn’t come with labeled data or evaluation criteria, so I treated it as an open-ended project. The provided floor plan examples are inconsistent—using different labels, line thicknesses, and so on—so I figured neural network-based methods would be the best approach here.
 
 ### Dataset
-I’m using the `CubiCasa5k` dataset. This dataset provides annotations for different room types, but I’m focusing on two categories: Walls and Rooms (without further subclassification). The dataset initially comes with masks, but I use only bboxes. I’ve converted it to `COCO` format for smoother integration with detection framework. 
+I’m using the `CubiCasa5k` dataset. This dataset provides annotations for different room types, but I’m focusing on two categories: Walls and Rooms (without further subclassification). The dataset initially comes with masks, but I use only bounding boxes. I’ve converted it to `COCO` format for smoother integration with detection framework. 
 
 - If you want to use [original dataset](https://zenodo.org/records/2613548), you need to download it and put into `data/CubiCasa5k/data` directory. For a quick overview of the dataset, check out the notebook: `/notebooks/cubicasa5k_dataset.ipynb`
 - If you want to use my [CubiCasa5k_COCO](https://drive.google.com/drive/folders/1hKRWrP-ZKk6ZHrjHOSRSxPe_r_kMd8uh?usp=sharing) dataset of train another model on it, you need to download it and puth into `data/cubicasa5k_coco` directory. You still need images in `data/CubiCasa5k/data`.
@@ -89,7 +89,14 @@ I’m using the `CubiCasa5k` dataset. This dataset provides annotations for diff
 
 ### Models
 
-When you run server you should pass `--model` argument. Supported models are:
+When you run server you should pass `--model` argument. 
+
+The recommended model is Swin Transformer Cascade R-CNN, it goes as `cascade_swin`. 
+
+This model uses a cascade of detectors that refine predictions step-by-step, making localization more precise. I use ResNet-101 as its backbone, so the model gets deep and detailed features from images, while staying efficient. The Feature Pyramid Network (FPN) helps spot objects of all sizes.
+
+Supported models are:
+- `cascade_swin`
 - `faster_rcnn`
 - `retinanet`
 

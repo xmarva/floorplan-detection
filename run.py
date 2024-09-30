@@ -16,6 +16,7 @@ CHECKPOINT_DIR = "weights/"
 DEVICE = "cuda:0"
 
 MODEL_TYPES = {
+    "cascade_swin": "cascade_swin.py", 
     "faster_rcnn": "faster_rcnn.py",
     "retinanet": "retinanet.py",
     # More models here
