@@ -13,11 +13,19 @@ I’m also sharing my notebooks, research results, and some thoughts on how the 
 Download the  [pre-trained weights](https://drive.google.com/file/d/1A9sZlM8NXe2bA7jgzm7jNeiB6oXjDUP-/view?usp=sharing) and place them in the `/models` directory. You can adjust model types by specifying them when running the server.
 
 ### Build with Docker
+I used Kaggle to experiment, so the image weighs a gazillion (no, seriously, 66) gb. If I don't forget, I'll rebuild a lighter image.
+
 To build the code environment, use the provided Dockerfile in the root directory:
 
-`docker build -t floorplan-detection .`
+`docker build -t floorplan-detection . -f Dockerfile`
 
-I used Kaggle to experiment, so the image weighs a gazillion (no, seriously, 66) gb. If I don't forget, I'll rebuild a lighter image.
+Please don't forget:
+
+`docker system prune`
+
+And use command to run container:
+
+`docker run -it --rm --gpus all -p 5000:5000 florplan_detection:latest bash`
 
 ### Start the Server
 To start the FastAPI server, use the following command:
@@ -28,7 +36,7 @@ To start the FastAPI server, use the following command:
 
 I assume that the API input is an image with a region of interest containing only the architectural plan
 
-```
+```shell
 curl -X POST "http://localhost:5000/run-inference?type=wall" \
      -H "Content-Type: multipart/form-data" \
      -F "image=@/path/to/your/image.jpg"
@@ -36,7 +44,7 @@ curl -X POST "http://localhost:5000/run-inference?type=wall" \
 
 The type parameter (wall or room) is required but doesn't affect the response structure. The API will return a JSON response with both detected walls and rooms.
 
-```
+```json
 {
   "type": "floor_plan",
   "confidence": 0.8851,
