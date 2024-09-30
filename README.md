@@ -24,12 +24,53 @@ To start the FastAPI server, use the following command:
 
 `python run.py --model <model_name>`
 
-## Info
+### API Request
+
+I assume that the API input is an image with a region of interest containing only the architectural plan
+
+```
+curl -X POST "http://localhost:5000/run-inference?type=wall" \
+     -H "Content-Type: multipart/form-data" \
+     -F "image=@/path/to/your/image.jpg"
+```
+
+The type parameter (wall or room) is required but doesn't affect the response structure. The API will return a JSON response with both detected walls and rooms.
+
+```
+{
+  "type": "floor_plan",
+  "confidence": 0.8851,
+  "detectionResults": {
+    "walls": [
+      {
+        "id": "wall_1",
+        "position": {
+          "start": {"x": 10.5, "y": 20.3},
+          "end": {"x": 110.2, "y": 20.3}
+        },
+        "confidence": 0.9234
+      },
+      ...
+    ],
+    "rooms": [
+      {
+        "id": "room_1",
+        "position": {
+          "start": {"x": 20.3, "y": 25.7},
+          "end": {"x": 105.6, "y": 125.9}
+        },
+        "confidence": 0.8352
+      },
+      ...
+    ]
+  }
+}
+```
+
+## About
 
 ### First things first
 The task doesn’t come with labeled data or evaluation criteria, so I treated it as an open-ended project. The provided floor plan examples are inconsistent—using different labels, line thicknesses, and so on—so I figured neural network-based methods would be the best approach here.
-
-- [Read pdf floorplan detection report](docs/FloorPlan_Detection_Report.pdf)
 
 ### Dataset
 I’m using the `CubiCasa5k` dataset. This dataset provides annotations for different room types, but I’m focusing on two categories: Walls and Rooms (without further subclassification). The dataset initially comes with masks, but I use only bboxes. I’ve converted it to `COCO` format for smoother integration with detection framework. 
@@ -45,3 +86,13 @@ When you run server you should pass `--model` argument. Supported models are:
 - `retinanet`
 
 You need download [model weights](https://drive.google.com/drive/folders/1MgW3Qo-8K4OrHi4ebvYd-81cTqQxwLgz?usp=sharing) and put into `weights/` folder.
+
+### Research
+
+- DeepFlorPlan - `/notebooks/deepflorplan_model.ipynb`
+- SAM Baseline - `/notebooks/sam_baseline.ipynb`
+
+### Notebooks
+
+- CubiCasa5k Dataset - `/notebooks/cubicasa5k_dataset.ipynb`
+- Inference and Visualization - `/notebooks/inference_and visualization.ipynb`
