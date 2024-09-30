@@ -85,7 +85,7 @@ I’m using the `CubiCasa5k` dataset. This dataset provides annotations for diff
 
 - If you want to use [original dataset](https://zenodo.org/records/2613548), you need to download it and put into `data/CubiCasa5k/data` directory. For a quick overview of the dataset, check out the notebook: `/notebooks/cubicasa5k_dataset.ipynb`
 - If you want to use my [CubiCasa5k_COCO](https://drive.google.com/drive/folders/1hKRWrP-ZKk6ZHrjHOSRSxPe_r_kMd8uh?usp=sharing) dataset of train another model on it, you need to download it and puth into `data/cubicasa5k_coco` directory. You still need images in `data/CubiCasa5k/data`.
-- If you want to modify original data to coco format (with masks or anything else) you can use `data/cubicasa5k_to_coco.py` script.
+- If you want to modify original data to coco format (with masks or anything else) you can use `notebooks/cubicasa5k_to_coco.ipynb` script.
 
 ### Models
 
@@ -97,12 +97,12 @@ You need download [model weights](https://drive.google.com/drive/folders/1MgW3Qo
 
 ### Research
 
-- DeepFlorPlan - `/notebooks/deepflorplan_model.ipynb`
+- DeepFlorPlan - `/notebooks/deepfloorplan_model.ipynb`
 - SAM Baseline - `/notebooks/sam_baseline.ipynb`
 
 ### Notebooks
 
-- CubiCasa5k Dataset - `/notebooks/cubicasa5k_dataset.ipynb`
+- CubiCasa5k Dataset - `/notebooks/cubicasa5k_to_coco.ipynb`
 - Inference and Visualization - `/notebooks/inference_and visualization.ipynb`
 
 ### Train model
