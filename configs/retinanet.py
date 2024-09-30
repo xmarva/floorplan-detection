@@ -1,6 +1,6 @@
 _base_ = [
-    '/kaggle/working/CubiCasa5k/mmdetection/configs/_base_/models/retinanet_r50_fpn.py',
-    '/kaggle/working/CubiCasa5k/mmdetection/configs/_base_/default_runtime.py'
+    '../kaggle/working/CubiCasa5k/mmdetection/configs/_base_/models/retinanet_r50_fpn.py',
+    '../kaggle/working/CubiCasa5k/mmdetection/configs/_base_/default_runtime.py'
 ]
 
 model = dict(

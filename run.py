@@ -1,5 +1,7 @@
 import os
+import json
 import argparse
+import numpy as np
 from typing import Literal
 
 import mmcv
@@ -33,27 +35,56 @@ def load_model(model_type: str):
     
     return init_detector(config_file, checkpoint_file, device=DEVICE)
 
+def process_inference_result(result) -> Dict[str, Any]:
+    bboxes = result.pred_instances.bboxes.cpu().numpy()
+    labels = result.pred_instances.labels.cpu().numpy()
+    scores = result.pred_instances.scores.cpu().numpy()
+
+    walls = []
+    rooms = []
+
+    for i, (bbox, label, score) in enumerate(zip(bboxes, labels, scores)):
+        x1, y1, x2, y2 = bbox
+        item = {
+            "id": f"{'wall' if label == 0 else 'room'}_{i+1}",
+            "position": {
+                "start": {"x": float(x1), "y": float(y1)},
+                "end": {"x": float(x2), "y": float(y2)}
+            },
+            "confidence": float(score)
+        }
+        if label == 0:
+            walls.append(item)
+        else:
+            rooms.append(item)
+
+    return {
+        "type": "floor_plan",
+        "confidence": float(np.mean(scores)),  # Overall confidence as mean of all scores
+        "detectionResults": {
+            "walls": walls,
+            "rooms": rooms
+        }
+    }
+
 @app.post("/run-inference")
 async def run_inference(
     type: Literal["wall", "room"],
     image: UploadFile = File(...)
 ):
     try:
-
         global global_model
-        
         if global_model is None:
             raise ValueError("Model not initialized. Please restart the server with the correct model type.")
-        
+
         img_content = await image.read()
         img = mmcv.imread(img_content)
-        
         result = inference_detector(global_model, img)
-        
-        processed_result = f"Processed {type} detection result"
-        
-        return {"result": processed_result}
-    
+
+        # Process the result into the desired format
+        processed_result = process_inference_result(result)
+
+        return processed_result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

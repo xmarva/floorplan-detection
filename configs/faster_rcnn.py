@@ -1,6 +1,6 @@
 _base_ = [
-    'mmdetection/configs/_base_/models/faster-rcnn_r50_fpn.py',
-    'mmdetection/configs/_base_/default_runtime.py'
+    '../mmdetection/configs/_base_/models/faster-rcnn_r50_fpn.py',
+    '../mmdetection/configs/_base_/default_runtime.py'
 ]
 
 dataset_type = 'CocoDataset'
