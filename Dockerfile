@@ -1,5 +1,6 @@
 FROM gcr.io/kaggle-gpu-images/python:v152
 
+WORKDIR /kaggle/working
 ADD . /kaggle/working
 
 RUN pip install lmdb svgpathtools pycocotools openmim wandb fastapi

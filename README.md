@@ -10,7 +10,7 @@ I’m also sharing my notebooks, research results, and some thoughts on how the 
 ## How to run
 
 ### Model Weights
-Download the  [pre-trained weights](https://drive.google.com/file/d/1A9sZlM8NXe2bA7jgzm7jNeiB6oXjDUP-/view?usp=sharing) and place them in the `/models` directory. You can adjust model types by specifying them when running the server.
+Download the  [pre-trained model weights](https://drive.google.com/drive/folders/1MgW3Qo-8K4OrHi4ebvYd-81cTqQxwLgz?usp=sharing) and place them in the `/models` directory. You can adjust model types by specifying them when running the server.
 
 ### Build with Docker
 I used Kaggle to experiment, so the image weighs a gazillion (no, seriously, 66) gb. If I don't forget, I'll rebuild a lighter image.
@@ -104,3 +104,11 @@ You need download [model weights](https://drive.google.com/drive/folders/1MgW3Qo
 
 - CubiCasa5k Dataset - `/notebooks/cubicasa5k_dataset.ipynb`
 - Inference and Visualization - `/notebooks/inference_and visualization.ipynb`
+
+### Train model
+
+To train another mmdetection architecture for this task, you need to create config file for this model and put it into `/configs` directory
+
+```shell
+python mmdetection/tools/train.py configs/[custom_model_config].py
+```
