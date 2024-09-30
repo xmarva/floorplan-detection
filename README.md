@@ -17,6 +17,8 @@ To build the code environment, use the provided Dockerfile in the root directory
 
 `docker build -t floorplan-detection .`
 
+I used Kaggle to experiment, so the image weighs a gazillion (no, seriously, 66) gb. If I don't forget, I'll rebuild a lighter image.
+
 ### Start the Server
 To start the FastAPI server, use the following command:
 
@@ -26,6 +28,8 @@ To start the FastAPI server, use the following command:
 
 ### First things first
 The task doesn’t come with labeled data or evaluation criteria, so I treated it as an open-ended project. The provided floor plan examples are inconsistent—using different labels, line thicknesses, and so on—so I figured neural network-based methods would be the best approach here.
+
+- [Read pdf floorplan detection report](docs/FloorPlan_Detection_Report.pdf)
 
 ### Dataset
 I’m using the `CubiCasa5k` dataset. This dataset provides annotations for different room types, but I’m focusing on two categories: Walls and Rooms (without further subclassification). The dataset initially comes with masks, but I use only bboxes. I’ve converted it to `COCO` format for smoother integration with detection framework. 
@@ -41,6 +45,3 @@ When you run server you should pass `--model` argument. Supported models are:
 - `retinanet`
 
 You need download [model weights](https://drive.google.com/drive/folders/1MgW3Qo-8K4OrHi4ebvYd-81cTqQxwLgz?usp=sharing) and put into `weights/` folder.
-
-### Report
-- [FloorPlan_Detection_Report.pdf](docs/FloorPlan_Detection_Report.pdf)
