@@ -93,6 +93,8 @@ When you run server you should pass `--model` argument.
 
 The recommended model is Swin Transformer Cascade R-CNN, it goes as `cascade_swin`. 
 
+![Cascade Swin Transformer](examples/swin_transformer.png)
+
 This model uses a cascade of detectors that refine predictions step-by-step, making localization more precise. I use ResNet-101 as its backbone, so the model gets deep and detailed features from images, while staying efficient. The Feature Pyramid Network (FPN) helps spot objects of all sizes.
 
 Supported models are:
