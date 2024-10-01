@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 CONFIG_DIR = "configs/"
 CHECKPOINT_DIR = "weights/"
-DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 MODEL_TYPES = {
@@ -29,8 +28,20 @@ MODEL_TYPES = {
 }
 
 global_model = None
+global_device = None
+
+def determine_device():
+    if torch.cuda.is_available():
+        try:
+            # Try initializing CUDA
+            torch.cuda.init()
+            return "cuda:0"
+        except Exception as e:
+            logger.warning(f"CUDA initialization failed: {str(e)}. Falling back to CPU.")
+    return "cpu"
 
 def load_model(model_type: str):
+    global global_device
     if model_type not in MODEL_TYPES:
         raise ValueError(f"Unsupported model type: {model_type}")
     config_file = os.path.join(CONFIG_DIR, MODEL_TYPES[model_type])
@@ -38,12 +49,20 @@ def load_model(model_type: str):
     if not os.path.exists(config_file) or not os.path.exists(checkpoint_file):
         raise FileNotFoundError(f"Config or checkpoint file not found for {model_type}")
     try:
-        model = init_detector(config_file, checkpoint_file, device=DEVICE)
-        logger.info(f"Model {model_type} loaded successfully on {DEVICE}")
+        global_device = determine_device()
+        model = init_detector(config_file, checkpoint_file, device=global_device)
+        logger.info(f"Model {model_type} loaded successfully on {global_device}")
         return model
     except Exception as e:
-        logger.error(f"Failed to load model {model_type}: {str(e)}")
-        raise
+        logger.error(f"Failed to load model {model_type} on {global_device}: {str(e)}")
+        if global_device == "cuda:0":
+            logger.info("Attempting to load model on CPU")
+            global_device = "cpu"
+            model = init_detector(config_file, checkpoint_file, device=global_device)
+            logger.info(f"Model {model_type} loaded successfully on CPU")
+            return model
+        else:
+            raise
 
 def process_inference_result(result) -> Dict[str, Any]:
     bboxes = result.pred_instances.bboxes.cpu().numpy()
@@ -117,7 +136,7 @@ def main():
         logger.error(f"Failed to initialize model: {str(e)}")
         return
 
-    logger.info(f"Starting server with {args.model} model on device: {DEVICE}")
+    logger.info(f"Starting server with {args.model} model on device: {global_device}")
     uvicorn.run(app, host=args.host, port=args.port)
 
 if __name__ == "__main__":
