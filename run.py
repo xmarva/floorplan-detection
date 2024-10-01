@@ -13,7 +13,7 @@ app = FastAPI()
 
 CONFIG_DIR = "configs/"
 CHECKPOINT_DIR = "weights/"
-DEVICE = "cuda:0"
+DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 MODEL_TYPES = {
     "cascade_swin": "cascade_swin.py",
@@ -80,7 +80,7 @@ async def run_inference(image: UploadFile = File(...)):
         result = inference_detector(global_model, img)
 
         processed_result = process_inference_result(result)
-        
+
         return processed_result
 
     except Exception as e:
