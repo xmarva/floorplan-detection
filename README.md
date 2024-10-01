@@ -1,4 +1,4 @@
-# ❌ FloorPlan Detection (Not Finished)
+# ✅ FloorPlan Detection (Complete)
 
 ![FloorPlan](examples/image.png)
 
