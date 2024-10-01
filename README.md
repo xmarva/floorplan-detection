@@ -104,6 +104,8 @@ Supported models are:
 
 You need download [model weights](https://drive.google.com/drive/folders/1MgW3Qo-8K4OrHi4ebvYd-81cTqQxwLgz?usp=sharing) and put into `weights/` folder.
 
+![Cascade Swin Training Result](examples/training_results.png)
+
 ### Research
 
 - DeepFlorPlan - `/notebooks/deepfloorplan_model.ipynb`
@@ -121,3 +123,13 @@ To train another mmdetection architecture for this task, you need to create conf
 ```shell
 python mmdetection/tools/train.py configs/[custom_model_config].py
 ```
+
+### Examples
+
+Example Inference for test image from CubiCasa5k dataset:
+
+![Example CubiCasa5k](examples/example_cubicasa5k.png)
+
+Example Inference for test image from provided pdfs:
+
+![Example TrueBuilt](examples/example_truebuilt.png)
