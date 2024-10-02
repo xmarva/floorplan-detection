@@ -1,5 +1,8 @@
 # ✅ FloorPlan Detection (Complete)
 
+
+[![FloorPlan Detection - Notebook](https://img.shields.io/static/v1?label=FloorPlan+Detection&message=Notebook&color=2ea44f&logo=kaggle)](https://www.kaggle.com/code/qmarva/cubicasa5k-swin-transformer-mmdetection)
+
 ![FloorPlan](examples/image.png)
 
 ## Overview
