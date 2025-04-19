@@ -3,6 +3,8 @@
 
 [![FloorPlan Detection - Notebook](https://img.shields.io/static/v1?label=FloorPlan+Detection&message=Notebook&color=2ea44f&logo=kaggle)](https://www.kaggle.com/code/qmarva/cubicasa5k-swin-transformer-mmdetection)
 
+⚠️ Disclaimer: This test project was completed for a startup with a highly unprofessional hiring process. In hindsight, it was a mistake to invest so much time in a company that didn’t bother with a basic initial screening before assigning a multi-day take-home task. They were not transparent about the compensation details listed on Wellfound and ultimately ghosted me at the final stage, despite having agreed to move forward. They also spoke disrespectfully about their previous ML Engineer.
+
 ![FloorPlan](examples/image.png)
 
 ## Overview
