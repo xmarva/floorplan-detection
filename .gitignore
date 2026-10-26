@@ -6,8 +6,8 @@ __pycache__/
 .venv/
 
 # Downloaded separately (see README): model weights and COCO annotations
-weights/
-data/cubicasa5k_coco/
+/weights
+/data/cubicasa5k_coco
 *.pth
 
 # Training outputs
