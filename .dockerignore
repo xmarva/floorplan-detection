@@ -1,0 +1,5 @@
+# Only what the image needs; keeps weights, data and .git out of the build context.
+*
+!run.py
+!requirements.txt
+!configs/

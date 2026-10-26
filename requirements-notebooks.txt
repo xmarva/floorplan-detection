@@ -1,0 +1,9 @@
+# Extra packages for training (the configs log to Weights & Biases) and for the notebooks.
+# The conversion notebook also imports `floortrans` from the data/CubiCasa5k submodule.
+-r requirements.txt
+wandb
+lmdb
+svgpathtools
+scikit-image
+matplotlib
+tqdm

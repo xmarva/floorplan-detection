@@ -1,0 +1,10 @@
+# Dependencies of the inference server (run.py), for Python 3.10 or 3.11.
+# Install PyTorch and mmcv first: their wheels depend on the CUDA version (see README.md).
+# Tested with torch 2.1.2 and mmcv 2.1.0.
+mmengine==0.10.5
+mmdet==3.3.0
+numpy==1.26.4
+opencv-python==4.11.0.86
+fastapi==0.115.6
+uvicorn==0.32.1
+python-multipart==0.0.20
