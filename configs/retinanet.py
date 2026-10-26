@@ -1,6 +1,8 @@
+# RetinaNet with a ResNet-50 + FPN backbone, fine-tuned from the COCO checkpoint in `load_from`.
+
 _base_ = [
-    '../kaggle/working/CubiCasa5k/mmdetection/configs/_base_/models/retinanet_r50_fpn.py',
-    '../kaggle/working/CubiCasa5k/mmdetection/configs/_base_/default_runtime.py'
+    '../mmdetection/configs/_base_/models/retinanet_r50_fpn.py',
+    '../mmdetection/configs/_base_/default_runtime.py',
 ]
 
 model = dict(
@@ -65,7 +67,11 @@ model = dict(
 
 
 dataset_type = 'CocoDataset'
+# Data: the Kaggle dataset qmarva/cubicasa5k, which holds the CubiCasa5k images and the COCO annotations
+# made with notebooks/cubicasa5k_to_coco.ipynb. The annotation files store absolute image paths of that
+# dataset; to train elsewhere, rewrite them as described in the README and change these two paths.
 data_root = '/kaggle/input/cubicasa5k/cubicasa5k/cubicasa5k'
+ann_dir = '/kaggle/input/cubicasa5k/cubicasa5k_coco/'
 classes = ('wall', 'room')
 
 
@@ -91,7 +97,7 @@ train_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='/kaggle/input/cubicasa5k/cubicasa5k_coco/train_coco_pt.json',
+        ann_file=ann_dir + 'train_coco_pt.json',
         data_prefix=dict(img=''),
         filter_cfg=dict(filter_empty_gt=True, min_size=32),
         pipeline=train_pipeline,
@@ -106,7 +112,7 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='/kaggle/input/cubicasa5k/cubicasa5k_coco/val_coco_pt.json',
+        ann_file=ann_dir + 'val_coco_pt.json',
         data_prefix=dict(img=''),
         test_mode=True,
         pipeline=test_pipeline,
@@ -117,7 +123,7 @@ test_dataloader = val_dataloader
 
 val_evaluator = dict(
     type='CocoMetric',
-    ann_file='/kaggle/input/cubicasa5k/cubicasa5k_coco/val_coco_pt.json',
+    ann_file=ann_dir + 'val_coco_pt.json',
     metric='bbox',
     format_only=False)
 test_evaluator = val_evaluator
@@ -164,7 +170,6 @@ visualizer = dict(
              init_kwargs={
                  'project': 'cubicasa5k_retinanet',
                  'name': 'v1',
-                 'entity': 'ml-samurai',
              })
     ],
     name='visualizer')

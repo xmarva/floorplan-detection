@@ -1,14 +1,17 @@
+# Faster R-CNN with a ResNet-50 + FPN backbone, fine-tuned from the COCO checkpoint in `load_from`.
+
 _base_ = [
     '../mmdetection/configs/_base_/models/faster-rcnn_r50_fpn.py',
-    '../mmdetection/configs/_base_/default_runtime.py'
+    '../mmdetection/configs/_base_/default_runtime.py',
 ]
 
 dataset_type = 'CocoDataset'
-data_root = 'data/cubicasa5k_coco'
-classes = ('wall', 'room')  # Include both wall and room classes
-
-img_norm_cfg = dict(
-    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+# Data: the Kaggle dataset qmarva/cubicasa5k, which holds the CubiCasa5k images and the COCO annotations
+# made with notebooks/cubicasa5k_to_coco.ipynb. The annotation files store absolute image paths of that
+# dataset; to train elsewhere, rewrite them as described in the README and change these two paths.
+data_root = '/kaggle/input/cubicasa5k/cubicasa5k/cubicasa5k'
+ann_dir = '/kaggle/input/cubicasa5k/cubicasa5k_coco/'
+classes = ('wall', 'room')
 
 train_pipeline = [
     dict(type='LoadImageFromFile'),
@@ -21,13 +24,6 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='Resize', scale=(1333, 800), keep_ratio=True),
-    # If you want to keep the original test pipeline's MultiScaleFlipAug, use this instead:
-    # dict(type='TestTimeAug',
-    #      transforms=[
-    #          dict(type='Resize', scale=(1333, 800), keep_ratio=True),
-    #          dict(type='RandomFlip', prob=0.0),
-    #          dict(type='PackDetInputs')
-    #      ])
     dict(type='PackDetInputs')
 ]
 
@@ -40,7 +36,7 @@ train_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='data/cubicasa5k_coco/train_coco_pt.json',
+        ann_file=ann_dir + 'train_coco_pt.json',
         data_prefix=dict(img=''),
         filter_cfg=dict(filter_empty_gt=True, min_size=32),
         pipeline=train_pipeline,
@@ -55,7 +51,7 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='data/cubicasa5k_coco/val_coco_pt.json',
+        ann_file=ann_dir + 'val_coco_pt.json',
         data_prefix=dict(img=''),
         test_mode=True,
         pipeline=test_pipeline,
@@ -65,18 +61,16 @@ test_dataloader = val_dataloader
 
 val_evaluator = dict(
     type='CocoMetric',
-    ann_file='data/cubicasa5k_coco/val_coco_pt.json',
+    ann_file=ann_dir + 'val_coco_pt.json',
     metric='bbox',
     format_only=False)
 
 test_evaluator = val_evaluator
 
-
 max_epochs = 12
 train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=max_epochs, val_interval=1)
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
-
 
 param_scheduler = [
     dict(
@@ -89,7 +83,6 @@ param_scheduler = [
         milestones=[8, 11],
         gamma=0.1)
 ]
-
 
 optim_wrapper = dict(
     type='OptimWrapper',
@@ -140,7 +133,7 @@ model = dict(
             in_channels=256,
             fc_out_channels=1024,
             roi_feat_size=7,
-            num_classes=2,  # Changed to 2 for wall and room
+            num_classes=2,
             bbox_coder=dict(
                 type='DeltaXYWHBBoxCoder',
                 target_means=[0., 0., 0., 0.],
@@ -149,7 +142,6 @@ model = dict(
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
             loss_bbox=dict(type='L1Loss', loss_weight=1.0))),
-    # Model training and testing settings
     train_cfg=dict(
         rpn=dict(
             assigner=dict(
@@ -216,7 +208,6 @@ visualizer = dict(
              init_kwargs={
                  'project': 'cubicasa5k_faster_rcnn',
                  'name': 'v1',
-                 'entity': 'ml-samurai',  # Replace with your W&B username or team name
              })
     ],
     name='visualizer')
@@ -226,24 +217,3 @@ log_processor = dict(type='LogProcessor', window_size=50, by_epoch=True)
 log_level = 'INFO'
 load_from = 'https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth'
 resume = False
-
-vis_backends = [
-    dict(type='LocalVisBackend'),
-    dict(
-        type='WandbVisBackend',
-        init_kwargs={
-            'project': 'cubicasa5k_faster_rcnn',
-            'name': 'v1',
-            'entity': 'ml-samurai',  # Replace with your W&B username or team name
-        },
-        define_metric_cfg={
-            'loss': 'min',
-            'accuracy': 'max'
-        })
-]
-
-visualizer = dict(type='DetLocalVisualizer',
-                  vis_backends=vis_backends,
-                  name='visualizer')
-
-#load_from = 'https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth'
