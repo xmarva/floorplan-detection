@@ -248,3 +248,10 @@ plans better; the CubiCasa5k annotations contain them, but the conversion keeps 
 
 The obvious next steps are to finish the training schedules, keep the best epoch rather than the last, measure Faster
 R-CNN, and report results on the test split.
+
+## License
+
+The code and notebooks in this repository are released under the [MIT License](LICENSE). The submodules keep their
+own licenses: MMDetection is Apache 2.0, and its base configs are what the configs in `configs/` build on. The
+CubiCasa5k data is CC BY-NC 4.0 (see [Data](#data)), so the trained weights come from data licensed for non-commercial
+use only.
