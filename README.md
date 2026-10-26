@@ -136,7 +136,3 @@ python mmdetection/tools/train.py configs/[custom_model_config].py
 Example of inference on a test image from the CubiCasa5k dataset:
 
 ![Example CubiCasa5k](examples/example_cubicasa5k.png)
-
-Example of inference on part of the image from the demonstrated pdf samples:
-
-![Example TrueBuilt](examples/example_truebuilt.png)
