@@ -1,0 +1,15 @@
+# OS and editor files
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+*.py[cod]
+.venv/
+
+# Downloaded separately (see README): model weights and COCO annotations
+weights/
+data/cubicasa5k_coco/
+*.pth
+
+# Training outputs
+work_dirs/
+wandb/
