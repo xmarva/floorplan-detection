@@ -1,143 +1,183 @@
-import os
-import json
+"""HTTP API that finds walls and rooms in a floor plan image with an MMDetection model.
+
+Usage:
+    python run.py --model cascade_swin [--checkpoint PATH] [--device cpu] [--score-threshold 0.3]
+
+The server loads the model once at startup and serves POST /run-inference (multipart field `image`,
+a JPEG or PNG file) and GET /health. See README.md for the response format.
+"""
+
 import argparse
-import numpy as np
-from typing import Dict, Any
-import mmcv
-import uvicorn
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from mmdet.apis import init_detector, inference_detector
-import cv2
-import torch
 import logging
+import sys
+import threading
+from pathlib import Path
 
-app = FastAPI()
+import cv2
+import numpy as np
+import uvicorn
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from pydantic import BaseModel
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+ROOT = Path(__file__).resolve().parent
+CONFIG_DIR = ROOT / "configs"
+WEIGHTS_DIR = ROOT / "weights"
 
-CONFIG_DIR = "configs/"
-CHECKPOINT_DIR = "weights/"
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
-
-MODEL_TYPES = {
-    "cascade_swin": "cascade_swin.py",
+# Model name -> config file in configs/. Weights are expected at weights/<name>_latest.pth.
+MODELS = {
+    "cascade_swin": "cascade_swin.py",  # Cascade R-CNN, ResNet-101 + FPN (the name is historical)
     "faster_rcnn": "faster_rcnn.py",
     "retinanet": "retinanet.py",
-    # More models here
 }
+CLASS_NAMES = ("wall", "room")  # label order used by all configs and checkpoints
+ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # bytes
 
-global_model = None
-global_device = None
+logger = logging.getLogger("floorplan")
 
-def determine_device():
-    if torch.cuda.is_available():
-        try:
-            # Try initializing CUDA
-            torch.cuda.init()
-            return "cuda:0"
-        except Exception as e:
-            logger.warning(f"CUDA initialization failed: {str(e)}. Falling back to CPU.")
-    return "cpu"
 
-def load_model(model_type: str):
-    global global_device
-    if model_type not in MODEL_TYPES:
-        raise ValueError(f"Unsupported model type: {model_type}")
-    config_file = os.path.join(CONFIG_DIR, MODEL_TYPES[model_type])
-    checkpoint_file = os.path.join(CHECKPOINT_DIR, f"{model_type}_latest.pth")
-    if not os.path.exists(config_file) or not os.path.exists(checkpoint_file):
-        raise FileNotFoundError(f"Config or checkpoint file not found for {model_type}")
-    try:
-        global_device = determine_device()
-        model = init_detector(config_file, checkpoint_file, device=global_device)
-        logger.info(f"Model {model_type} loaded successfully on {global_device}")
-        return model
-    except Exception as e:
-        logger.error(f"Failed to load model {model_type} on {global_device}: {str(e)}")
-        if global_device == "cuda:0":
-            logger.info("Attempting to load model on CPU")
-            global_device = "cpu"
-            model = init_detector(config_file, checkpoint_file, device=global_device)
-            logger.info(f"Model {model_type} loaded successfully on CPU")
-            return model
-        else:
-            raise
+class Point(BaseModel):
+    x: float
+    y: float
 
-def process_inference_result(result) -> Dict[str, Any]:
-    bboxes = result.pred_instances.bboxes.cpu().numpy()
-    labels = result.pred_instances.labels.cpu().numpy()
-    scores = result.pred_instances.scores.cpu().numpy()
-    walls = []
-    rooms = []
-    for i, (bbox, label, score) in enumerate(zip(bboxes, labels, scores)):
-        x1, y1, x2, y2 = bbox
-        item = {
-            "id": f"{'wall' if label == 0 else 'room'}_{i+1}",
-            "position": {
-                "start": {"x": float(x1), "y": float(y1)},
-                "end": {"x": float(x2), "y": float(y2)}
-            },
-            "confidence": float(score)
-        }
-        if label == 0:
-            walls.append(item)
-        else:
-            rooms.append(item)
-    return {
-        "type": "floor_plan",
-        "confidence": float(np.mean(scores)),  # Overall confidence as mean of all scores
-        "detectionResults": {
-            "walls": walls,
-            "rooms": rooms
-        }
-    }
 
-@app.post("/run-inference")
-async def run_inference(image: UploadFile = File(...)):
-    if not global_model:
-        raise HTTPException(status_code=500, detail="Model not initialized. Please restart the server with the correct model type.")
-    
-    if image.content_type not in ["image/jpeg", "image/png"]:
-        raise HTTPException(status_code=400, detail="Only JPEG and PNG images are supported.")
-    
-    try:
-        contents = await image.read()
-        if len(contents) > MAX_FILE_SIZE:
-            raise HTTPException(status_code=400, detail="File size exceeds the maximum limit of 10 MB.")
-        
-        nparr = np.frombuffer(contents, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+class Position(BaseModel):
+    start: Point  # top-left corner of the bounding box, in pixels of the input image
+    end: Point  # bottom-right corner
+
+
+class Detection(BaseModel):
+    id: str
+    position: Position
+    confidence: float
+
+
+class DetectionResults(BaseModel):
+    walls: list[Detection]
+    rooms: list[Detection]
+
+
+class InferenceResponse(BaseModel):
+    type: str = "floor_plan"
+    confidence: float  # mean confidence of the returned detections, 0 when there are none
+    detectionResults: DetectionResults  # camelCase name kept: it is part of the API
+
+
+def build_response(bboxes: np.ndarray, labels: np.ndarray, scores: np.ndarray) -> InferenceResponse:
+    """Group (x1, y1, x2, y2) boxes by class and number them per class: wall_1, wall_2, ..., room_1, ..."""
+    groups: dict[str, list[Detection]] = {name: [] for name in CLASS_NAMES}
+    for (x1, y1, x2, y2), label, score in zip(bboxes, labels, scores, strict=True):
+        name = CLASS_NAMES[int(label)]
+        groups[name].append(
+            Detection(
+                id=f"{name}_{len(groups[name]) + 1}",
+                position=Position(start=Point(x=float(x1), y=float(y1)), end=Point(x=float(x2), y=float(y2))),
+                confidence=float(score),
+            )
+        )
+    return InferenceResponse(
+        confidence=float(np.mean(scores)) if len(scores) else 0.0,
+        detectionResults=DetectionResults(walls=groups["wall"], rooms=groups["room"]),
+    )
+
+
+class Detector:
+    """An MMDetection model plus the score threshold applied to its output."""
+
+    def __init__(self, config: Path, checkpoint: Path, device: str, score_threshold: float):
+        # Imported here so that `python run.py --help` does not wait for torch and mmdet.
+        from mmdet.apis import inference_detector, init_detector
+
+        self._inference_detector = inference_detector
+        self.model = init_detector(str(config), str(checkpoint), device=device)
+        self.device = device
+        self.score_threshold = score_threshold
+        self._lock = threading.Lock()  # one inference at a time on the shared model
+
+    def predict(self, image_bgr: np.ndarray) -> InferenceResponse:
+        # MMDetection expects BGR arrays, as returned by cv2; the model converts them to RGB itself.
+        with self._lock:
+            result = self._inference_detector(self.model, image_bgr)
+        instances = result.pred_instances
+        keep = instances.scores >= self.score_threshold
+        return build_response(
+            instances.bboxes[keep].cpu().numpy(),
+            instances.labels[keep].cpu().numpy(),
+            instances.scores[keep].cpu().numpy(),
+        )
+
+
+def create_app(detector: Detector, model_name: str) -> FastAPI:
+    app = FastAPI(title="Floor plan detection", description="Walls and rooms in floor plan images.")
+
+    @app.get("/health")
+    def health() -> dict:
+        return {"status": "ok", "model": model_name, "device": detector.device}
+
+    # A plain `def` endpoint runs in FastAPI's thread pool, so inference does not block the event loop.
+    @app.post("/run-inference", response_model=InferenceResponse)
+    def run_inference(image: UploadFile = File(...)) -> InferenceResponse:
+        if image.content_type not in ALLOWED_CONTENT_TYPES:
+            raise HTTPException(status_code=415, detail="Only JPEG and PNG images are supported.")
+        data = image.file.read(MAX_FILE_SIZE + 1)
+        if len(data) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail=f"The image is larger than {MAX_FILE_SIZE // 2**20} MB.")
+        img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
         if img is None:
-            raise HTTPException(status_code=400, detail="Failed to decode image. Please ensure the image is not corrupted.")
-        
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        
-        result = inference_detector(global_model, img)
-        processed_result = process_inference_result(result)
-        logger.info("Inference completed successfully")
-        return processed_result
-    except Exception as e:
-        logger.error(f"Error during inference: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"An error occurred during inference: {str(e)}")
+            raise HTTPException(status_code=400, detail="Could not decode the image.")
+        try:
+            response = detector.predict(img)
+        except Exception:
+            logger.exception("Inference failed for %s", image.filename)
+            raise HTTPException(status_code=500, detail="Inference failed, see the server log.") from None
+        logger.info(
+            "%s: %d walls, %d rooms",
+            image.filename,
+            len(response.detectionResults.walls),
+            len(response.detectionResults.rooms),
+        )
+        return response
 
-def main():
-    parser = argparse.ArgumentParser(description="Run MMDetection inference API")
-    parser.add_argument("--model", type=str, choices=MODEL_TYPES.keys(), required=True,
-                        help="Type of model to use for inference")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to run the API on")
-    parser.add_argument("--port", type=int, default=5000, help="Port to run the API on")
+    return app
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Serve a model that finds walls and rooms in floor plans.")
+    parser.add_argument("--model", choices=MODELS, required=True, help="Model to serve.")
+    parser.add_argument("--checkpoint", type=Path, help="Checkpoint file (default: weights/<model>_latest.pth).")
+    parser.add_argument("--device", help="Torch device, e.g. cuda:0 or cpu (default: cuda:0 if available, else cpu).")
+    parser.add_argument(
+        "--score-threshold",
+        type=float,
+        default=0.3,
+        help="Drop detections with a lower confidence (default: 0.3; 0 keeps everything the model returns).",
+    )
+    parser.add_argument("--host", default="0.0.0.0", help="Address to bind (default: 0.0.0.0).")
+    parser.add_argument("--port", type=int, default=5000, help="Port to listen on (default: 5000).")
     args = parser.parse_args()
+    if not 0.0 <= args.score_threshold <= 1.0:
+        parser.error("--score-threshold must be between 0 and 1")
+    return args
 
-    global global_model
-    try:
-        global_model = load_model(args.model)
-    except Exception as e:
-        logger.error(f"Failed to initialize model: {str(e)}")
-        return
 
-    logger.info(f"Starting server with {args.model} model on device: {global_device}")
-    uvicorn.run(app, host=args.host, port=args.port)
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    args = parse_args()
+
+    config = CONFIG_DIR / MODELS[args.model]
+    checkpoint = args.checkpoint or WEIGHTS_DIR / f"{args.model}_latest.pth"
+    if not checkpoint.is_file():
+        sys.exit(f"Checkpoint not found: {checkpoint}\nDownload the weights (see README.md) into {WEIGHTS_DIR}/.")
+
+    if args.device is None:
+        import torch
+
+        args.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
+    logger.info("Loading %s from %s on %s", args.model, checkpoint, args.device)
+    detector = Detector(config, checkpoint, args.device, args.score_threshold)
+    uvicorn.run(create_app(detector, args.model), host=args.host, port=args.port)
+
 
 if __name__ == "__main__":
     main()
